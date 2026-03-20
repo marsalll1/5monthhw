@@ -1,6 +1,9 @@
 from rest_framework import serializers
-from .models import Category, Product, Review
+from django.contrib.auth import get_user_model
+from .models import Category, Product, Review, UserConfirmation
 from django.db.models import Avg
+
+User = get_user_model()
 
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
@@ -60,3 +63,23 @@ class CategorySerializer(serializers.ModelSerializer):
         if Category.objects.filter(name=value).exists():
             raise serializers.ValidationError("Category already exists")
         return value
+
+class UserRegisterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('username', 'email', 'password')
+        extra_kwargs = {'password': {'write_only': True}}
+
+    def create(self, validated_data):
+        user = User.objects.create(
+            username=validated_data['username'],
+            email=validated_data['email'],
+            is_active=False
+        )
+        user.set_password(validated_data['password'])
+        user.save()
+        return user
+
+class UserConfirmSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    code = serializers.CharField(max_length=6)
